@@ -1,0 +1,17 @@
+{
+  "node": {
+    "40eeb7d81b4ff8ef3b56a2aa8db21c678874429d5a": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/ai/flows/obfuscate-script.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "q/ASoleCUalvv+19HQrufP2fTKXZkvz+cEtDJXx9o+U="
+}
