@@ -39,16 +39,20 @@ const obfuscateScriptFlow = ai.defineFlow<
     const { script } = input;
 
     try {
-      // Retrieve API key from environment variables
-      const apiKey = process.env.LUAOBFUSCATOR_API_KEY || '1179e31b-5118-5fd0-d81a-4e146600c3daab0'; // Providing a fallback value
+
+     const apiKey = process.env.LUAOBFUSCATOR_API_KEY;
 
       if (!apiKey) {
         throw new Error('LUAOBFUSCATOR_API_KEY environment variable is not set.');
       }
       const obfuscationResult = await obfuscateLuaScript(script, apiKey)
 
-      // Upload the obfuscated script to pastefy.app as raw text
-      const pastefyApiKey = "evzZk5KJWEmTEjvKDoMZ2ubVw6TjXuMEgvgqYrwolifn8pXvrbZ7Grl8WAsH"; // Provided API key
+      const pastefyApiKey = process.env.PASTEFY_API_KEY;
+
+      if (!pastefyApiKey) {
+        throw new Error("PASTEFY_API_KEY environment variable is not set.");
+      }
+
       const uploadResponse = await fetch('https://pastefy.app/api/v2/paste', {
         method: 'POST',
         headers: {
@@ -75,11 +79,9 @@ const obfuscateScriptFlow = ai.defineFlow<
         throw new Error('Invalid Pastefy upload response.');
       }
 
-      // Construct the raw URL
       const pasteId = uploadData.paste.id;
       const pastefyLink = `https://pastefy.app/${pasteId}`;
       const rawUrl = `https://pastefy.app/${pasteId}/raw`;
-
 
       return {
         obfuscatedScript: `loadstring(game:HttpGet("${rawUrl}"))()`,
