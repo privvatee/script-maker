@@ -11,6 +11,8 @@ import { ai } from '@/ai/ai-instance';
 import { z } from 'genkit';
 import { obfuscateLuaScript } from '@/services/luaobfuscator';
 
+export const maxDuration = 30;
+
 const ObfuscateScriptInputSchema = z.object({
   script: z.string().describe('The Roblox script to obfuscate.'),
 });
