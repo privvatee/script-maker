@@ -29,10 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Apply font variables for the selected Google Fonts */}
-      {/* Ensure your tailwind.config.ts maps font families (e.g., sans, mono) */}
-      {/* to these variables (--font-inter, --font-roboto-mono) */}
-      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
+      {/* Apply font variables and base Tailwind antialiasing */}
+      {/* CHANGED background color class from bg-gray-900 to bg-black */}
+      <body className={`${inter.variable} ${robotoMono.variable} antialiased bg-black`}>
         {children}
       </body>
     </html>
