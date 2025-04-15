@@ -1,27 +1,20 @@
 import type { Metadata } from 'next';
-// Assuming Geist and Roboto_Mono are correctly imported from next/font/google
-import { Geist_Sans } from 'next/font/google'; // Corrected import name if using Geist package
-import { Geist_Mono } from 'next/font/google';
-import { Roboto_Mono } from 'next/font/google';
+// Import desired fonts ONLY from next/font/google
+import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 
-// Initialize fonts with variables
-const geistSans = Geist_Sans({ // Use the correct export name
-  variable: '--font-geist-sans',
+// Initialize Inter (sans-serif)
+const inter = Inter({
   subsets: ['latin'],
-  // Add weight options if needed/available
+  variable: '--font-inter', // Define CSS variable for Inter
+  // Add weights if needed, e.g., weight: ['400', '700']
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-  // Add weight options if needed/available
-});
-
+// Initialize Roboto Mono (mono-serif)
 const robotoMono = Roboto_Mono({
   subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-roboto-mono',
+  weight: ['400', '700'], // Keep weights for Roboto Mono
+  variable: '--font-roboto-mono', // Define CSS variable for Roboto Mono
 });
 
 export const metadata: Metadata = {
@@ -36,9 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Apply font variables and base Tailwind antialiasing */}
-      {/* REMOVED the 'roblox-script-forge' class to avoid global neon effects */}
-      <body className={`${robotoMono.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* Apply font variables for the selected Google Fonts */}
+      {/* Ensure your tailwind.config.ts maps font families (e.g., sans, mono) */}
+      {/* to these variables (--font-inter, --font-roboto-mono) */}
+      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
         {children}
       </body>
     </html>
