@@ -88,6 +88,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Ensure a base font if needed, e.g., from your layout.tsx */
+    /* font-family: 'Inter', sans-serif; */
   }
 }
 
@@ -96,39 +98,63 @@
   box-shadow: 0 0 5px rgba(var(--accent), 0.7), 0 0 10px rgba(var(--accent), 0.5);
 }
 
-/* Add a neon effect to the text */
+/* Add a neon effect to the text (potentially remove if replaced by text-neon-blue-glow) */
+/*
 .neon-text {
-  text-shadow: 0 0 5px rgba(var(--neon-blue), 0.9), 0 0 10px rgba(var(--neon-blue), 0.5); /* Stronger neon effect */
-  color: white; /* Ensure text is white */
+  text-shadow: 0 0 5px rgba(var(--neon-blue), 0.9), 0 0 10px rgba(var(--neon-blue), 0.5);
+  color: white;
 }
+*/
+
+/* --- NEW: Custom class for white text with neon blue glow --- */
+.text-neon-blue-glow {
+  color: white; /* Base text color */
+  text-shadow:
+    0 0 6px rgba(0, 191, 255, 0.7), /* Inner glow (Deep Sky Blue) */
+    0 0 10px rgba(0, 191, 255, 0.5), /* Outer glow */
+    0 0 20px rgba(0, 191, 255, 0.3); /* Fainter outer glow */
+  /* Adjust color (e.g., rgb(var(--neon-blue))) and blur/spread (e.g., 5px, 10px) as needed */
+}
+/* --- End NEW --- */
+
 
 /* Example usage: <Button className="cyber-glow neon-text"> */
+/* Example usage for new class: <h1 className="text-neon-blue-glow"> */
+
 
 /* Specific style for the download button */
 .download-button {
-  @apply bg-accent text-accent-foreground hover:bg-accent/80 cyber-glow rounded-md shadow-md;
+  /* Using Tailwind utilities directly in the component is often preferred */
+  /* Example: @apply bg-accent text-accent-foreground hover:bg-accent/80 cyber-glow rounded-md shadow-md; */
 }
 
 /* Specific style for generate script button */
 .generate-button {
-    @apply bg-primary text-primary-foreground hover:bg-primary/80 cyber-glow rounded-md shadow-md;
+   /* Using Tailwind utilities directly in the component is often preferred */
+  /* Example: @apply bg-primary text-primary-foreground hover:bg-primary/80 cyber-glow rounded-md shadow-md; */
 }
 
-/* Style for input and textarea */
+/* Style for input and textarea (Consider using Tailwind directly in component) */
+/*
 input,
 textarea {
   @apply bg-input text-foreground rounded-md shadow-sm focus:ring-accent focus:border-accent;
 }
+*/
 
-/* Style for labels */
+/* Style for labels (Consider using Tailwind directly in component) */
+/*
 label {
   @apply text-muted-foreground;
 }
+*/
 
-/* Style for checkboxes */
+/* Style for checkboxes (Consider using Tailwind directly in component) */
+/*
 input[type="checkbox"] {
   @apply bg-input rounded shadow-sm focus:ring-accent focus:border-accent;
 }
+*/
 
 .roblox-script-forge {
   background-color: black;
@@ -137,7 +163,8 @@ input[type="checkbox"] {
   outline: 1px solid rgba(var(--neon-blue), 0.5);
 }
 
-/* Style for fruit selection checkboxes and labels */
+/* Style for fruit selection checkboxes and labels (Consider using Tailwind directly in component) */
+/*
 .fruit-select-container {
     @apply flex items-center space-x-2 p-2 rounded hover:bg-input cursor-pointer;
 }
@@ -149,7 +176,12 @@ input[type="checkbox"] {
 .fruit-label {
     @apply text-muted-foreground transition-colors duration-200;
 }
+*/
 
+/* Style for tooltips (Consider using Tailwind directly in component) */
+/*
 .tooltip-content {
     @apply bg-gray-700/70 text-white absolute z-50 rounded-md p-4 border border-black;
 }
+*/
+
