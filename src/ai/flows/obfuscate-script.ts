@@ -75,9 +75,10 @@ const obfuscateScriptFlow = ai.defineFlow<
                 },
                 {
                   name: "Original Script",
-                  value: "```lua
-" + truncatedScript + "
-```", // Format as Lua code block
+                  // FIX: Use template literal for correct multiline string and interpolation
+                  value: `\`\`\`lua
+${truncatedScript}
+\`\`\``,
                   inline: false
                 }
               ],
